@@ -1,0 +1,52 @@
+name: lint
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y libzbar0
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --with dev
+
+      - name: Black
+        run: poetry run black --diff --check --color pritunl_connector/
+
+      - name: Ruff
+        run: poetry run ruff check pritunl_connector/
+
+      - name: Pylint
+        run: poetry run pylint pritunl_connector/
+
+      - name: Mypy
+        run: poetry run mypy --install-types --non-interactive --ignore-missing-imports pritunl_connector/
+
+      - name: Pyright
+        run: poetry run pyright pritunl_connector/
+
+      - name: Bandit
+        run: poetry run bandit -q -n 5 --configfile bandit.yml -r pritunl_connector/
+
+      - name: Flake8
+        run: poetry run flake8 pritunl_connector/ || true

@@ -1,0 +1,121 @@
+[build-system]
+requires = ["poetry-core>=2.2.1"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "pritunl-vpn-connector"
+version = "0.1.0"
+description = "Local HTTP service for managing Pritunl VPN with auto-TOTP generation."
+authors = ["Ilia Vereshchagin i.vereshchagin@gmail.com"]
+readme = "README.md"
+packages = [{ include = "pritunl_connector" }]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.14"
+fastapi = "^0.135.2"
+uvicorn = "^0.42.0"
+pyotp = "^2.9.0"
+pillow = "^12.1.1"
+pyzbar = "^0.1.9"
+httpx = "^0.28.1"
+structlog = "^25.5.0"
+
+[tool.poetry.group.dev.dependencies]
+bandit = "^1.8.6"
+black = "^25.9.0"
+flake8-quotes = "^3.4.0"
+mypy = "^1.18.2"
+pylint = "^4.0.0"
+pyright = "^1.1.407"
+ruff = "^0.14.2"
+wemake-python-styleguide = "^1.4.0"
+
+[tool.poetry.scripts]
+pritunl-service = "pritunl_connector.service:main"
+import-totp = "pritunl_connector.import_totp:main"
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+force-exclude = true
+line-length = 120
+indent-width = 4
+target-version = "py311"
+
+[tool.flake8]
+max-line-length = 120
+inline-quotes = "\""
+multiline-quotes = "\"\"\""
+docstring-quotes = "\"\"\""
+avoid-escape = false
+extend-ignore = """
+    Q000,
+    WPS306,
+    I001,
+    I005,
+    WPS229,
+    D400,
+    WPS317,
+    S101,
+    WPS507,
+    WPS237,
+    WPS305,
+    WPS602,
+    WPS336,
+    C812,
+    WPS230,
+    WPS221,
+    WPS323,
+    WPS214,
+    WPS213,
+    WPS219,
+    WPS326,
+    WPS220,
+    WPS226,
+    WPS202,
+    WPS216,
+    DAR201,
+    DAR101,
+    D205,
+    WPS112,
+    WPS305,
+    DAR401,
+    E501,
+    WPS115,
+    WPS529,
+    F6401,
+    E501
+"""
+
+[tool.pylint.FORMAT]
+max-line-length = 120
+max-args = 10
+max-attributes = 15
+min-public-methods = 1
+max-public-methods = 30
+
+[tool.pylint.DESIGN]
+max-positional-arguments = 10
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "C0111",
+    "W0703",
+    "E1101",
+    "W0621",
+    "import-error",
+]
+
+[tool.pyright]
+reportCallIssue = "none"
+pythonVersion = "3.11"
+pythonPlatform = "All"
+
+[tool.bandit]
+skips = ["B101", "B311", "B104"]
+
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = true
+ignore_missing_imports = true
