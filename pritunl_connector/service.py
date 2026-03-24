@@ -178,6 +178,32 @@ def _launch_pritunl_app() -> None:
     )
 
 
+def _is_pritunl_gui_running() -> bool:
+    """
+    Check whether the Pritunl GUI (Electron) process is running.
+
+    :return: True if the GUI process is found
+    :rtype: bool
+    """
+    try:
+        result = subprocess.run(  # noqa: S603
+            ["/usr/bin/pgrep", "-xq", "Pritunl"],
+            capture_output=True,
+            timeout=3,
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+
+
+def _ensure_pritunl_gui() -> None:
+    """Launch Pritunl GUI if it's not already visible so the user can see VPN status in the tray."""
+    if _is_pritunl_gui_running():
+        return
+    log.info("Pritunl GUI not running, launching for tray indicator")
+    _launch_pritunl_app()
+
+
 async def _ensure_pritunl_running() -> None:
     """
     Make sure pritunl-service is reachable; launch the app and wait for the socket if needed.
@@ -421,6 +447,7 @@ async def connect() -> dict[str, Any]:
 
     profiles = _get_profiles()
     if profile_id in profiles and profiles[profile_id].get("status") == "connected":
+        _ensure_pritunl_gui()
         return {"status": "already_connected", "profile": profiles[profile_id]}
 
     conf = _load_profile_conf(profile_id)
@@ -469,6 +496,7 @@ async def connect() -> dict[str, Any]:
                 client_addr=prof.get("client_addr"),
                 server_addr=prof.get("server_addr"),
             )
+            _ensure_pritunl_gui()
             return {"status": "connected", "profile": prof}
 
     profiles = _get_profiles()
