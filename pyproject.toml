@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 name = "pritunl-vpn-connector"
 version = "0.1.0"
 description = "Local HTTP service for managing Pritunl VPN with auto-TOTP generation."
-authors = ["Ilia Vereshchagin i."]
+authors = ["Ilia Vereshchagin <i.vereshchagin@gmail.com>"]
 readme = "README.md"
 packages = [{ include = "pritunl_connector" }]
 
