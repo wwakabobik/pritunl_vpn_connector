@@ -146,12 +146,22 @@ PRITUNL_SOCK_WAIT_SECONDS = 15
 
 def _is_pritunl_running() -> bool:
     """
-    Check whether the pritunl-service unix socket is available.
+    Check whether the pritunl-service is actually responding on the unix socket.
 
-    :return: True if the socket file exists
+    A stale socket file can remain after the app is closed, so we attempt
+    a real HTTP request rather than just checking for file existence.
+
+    :return: True if the service responds
     :rtype: bool
     """
-    return Path(PRITUNL_SOCK).exists()
+    if not Path(PRITUNL_SOCK).exists():
+        return False
+    try:
+        with _pritunl_client() as client:
+            resp = client.get("http://localhost/profile")
+            return resp.status_code == 200
+    except (httpx.ConnectError, httpx.TimeoutException, OSError):
+        return False
 
 
 def _launch_pritunl_app() -> None:
