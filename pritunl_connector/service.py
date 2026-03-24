@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import subprocess
 import time
 from pathlib import Path
 from typing import Any, Optional
@@ -137,6 +138,96 @@ def _get_profiles() -> dict[str, Any]:
     if isinstance(result, dict):
         return result
     return {}
+
+
+PRITUNL_APP = "Pritunl"
+PRITUNL_SOCK_WAIT_SECONDS = 15
+
+
+def _is_pritunl_running() -> bool:
+    """
+    Check whether the pritunl-service is actually responding on the unix socket.
+
+    A stale socket file can remain after the app is closed, so we attempt
+    a real HTTP request rather than just checking for file existence.
+
+    :return: True if the service responds
+    :rtype: bool
+    """
+    if not Path(PRITUNL_SOCK).exists():
+        return False
+    try:
+        with _pritunl_client() as client:
+            resp = client.get("http://localhost/profile")
+            return resp.status_code == 200
+    except (httpx.ConnectError, httpx.TimeoutException, OSError):
+        return False
+
+
+def _launch_pritunl_app() -> None:
+    """
+    Launch Pritunl.app via macOS ``open -a`` (non-blocking).
+
+    :raises FileNotFoundError: if the application is not installed
+    """
+    log.info("Launching Pritunl.app")
+    with subprocess.Popen(  # noqa: S603
+        ["/usr/bin/open", "-a", PRITUNL_APP],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    ):
+        pass
+
+
+def _is_pritunl_gui_running() -> bool:
+    """
+    Check whether the Pritunl GUI (Electron) process is running.
+
+    :return: True if the GUI process is found
+    :rtype: bool
+    """
+    try:
+        result = subprocess.run(  # noqa: S603
+            ["/usr/bin/pgrep", "-xq", "Pritunl"],
+            capture_output=True,
+            timeout=3,
+            check=False,
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+
+
+def _ensure_pritunl_gui() -> None:
+    """Launch Pritunl GUI if it's not already visible so the user can see VPN status in the tray."""
+    if _is_pritunl_gui_running():
+        return
+    log.info("Pritunl GUI not running, launching for tray indicator")
+    _launch_pritunl_app()
+
+
+async def _ensure_pritunl_running() -> None:
+    """
+    Make sure pritunl-service is reachable; launch the app and wait for the socket if needed.
+
+    :raises HTTPException: if the socket does not appear within the timeout
+    """
+    if _is_pritunl_running():
+        return
+
+    _launch_pritunl_app()
+
+    for elapsed in range(PRITUNL_SOCK_WAIT_SECONDS):
+        await asyncio.sleep(1)
+        if _is_pritunl_running():
+            log.info("Pritunl service ready", waited_seconds=elapsed + 1)
+            return
+
+    raise HTTPException(
+        status_code=503,
+        detail=f"Pritunl service did not start within {PRITUNL_SOCK_WAIT_SECONDS}s. "
+        "Verify that Pritunl.app is installed.",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -324,6 +415,7 @@ async def totp() -> dict[str, Any]:
 @app.get("/status")
 async def status() -> dict[str, Any]:
     """Return VPN connection status from pritunl-service socket API."""
+    await _ensure_pritunl_running()
     profiles = _get_profiles()
     cfg = load_config()
     profile_id = cfg.get("profile_id", "")
@@ -345,6 +437,7 @@ async def status() -> dict[str, Any]:
 @app.post("/connect")
 async def connect() -> dict[str, Any]:
     """Connect VPN: auto-generate TOTP and start the profile via pritunl-service socket."""
+    await _ensure_pritunl_running()
     cfg = load_config()
     secret = cfg.get("totp_secret", "")
     if not secret:
@@ -356,6 +449,7 @@ async def connect() -> dict[str, Any]:
 
     profiles = _get_profiles()
     if profile_id in profiles and profiles[profile_id].get("status") == "connected":
+        _ensure_pritunl_gui()
         return {"status": "already_connected", "profile": profiles[profile_id]}
 
     conf = _load_profile_conf(profile_id)
@@ -404,6 +498,7 @@ async def connect() -> dict[str, Any]:
                 client_addr=prof.get("client_addr"),
                 server_addr=prof.get("server_addr"),
             )
+            _ensure_pritunl_gui()
             return {"status": "connected", "profile": prof}
 
     profiles = _get_profiles()
@@ -414,6 +509,7 @@ async def connect() -> dict[str, Any]:
 @app.post("/disconnect")
 async def disconnect() -> dict[str, Any]:
     """Disconnect VPN via pritunl-service socket."""
+    await _ensure_pritunl_running()
     cfg = load_config()
     profile_id = cfg.get("profile_id", "")
 
