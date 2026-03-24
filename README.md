@@ -1,5 +1,7 @@
 # Pritunl VPN Connector
 
+[![Linters](https://github.com/wwakabobik/pritunl_vpn_connector/actions/workflows/lint.yml/badge.svg)](https://github.com/wwakabobik/pritunl_vpn_connector/actions/workflows/lint.yml)
+
 Local HTTP service for managing Pritunl VPN connections with automatic TOTP code generation.
 
 Runs as a macOS LaunchAgent on `127.0.0.1:9779` and provides a REST API that can be used
