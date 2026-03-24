@@ -171,11 +171,12 @@ def _launch_pritunl_app() -> None:
     :raises FileNotFoundError: if the application is not installed
     """
     log.info("Launching Pritunl.app")
-    subprocess.Popen(  # noqa: S603
+    with subprocess.Popen(  # noqa: S603
         ["/usr/bin/open", "-a", PRITUNL_APP],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-    )
+    ):
+        pass
 
 
 def _is_pritunl_gui_running() -> bool:
@@ -190,6 +191,7 @@ def _is_pritunl_gui_running() -> bool:
             ["/usr/bin/pgrep", "-xq", "Pritunl"],
             capture_output=True,
             timeout=3,
+            check=False,
         )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, OSError):
