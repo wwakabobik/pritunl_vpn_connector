@@ -1,0 +1,41 @@
+[flake8]
+max-line-length = 120
+inline-quotes = "
+multiline-quotes = """
+docstring-quotes = """
+avoid-escape = False
+extend-ignore =
+    Q000,
+    WPS306,
+    I001,
+    I005,
+    WPS229,
+    D400,
+    WPS317,
+    S101,
+    WPS507,
+    WPS237,
+    WPS305,
+    WPS602,
+    WPS336,
+    C812,
+    WPS230,
+    WPS221,
+    WPS323,
+    WPS214,
+    WPS213,
+    WPS219,
+    WPS326,
+    WPS220,
+    WPS226,
+    WPS202,
+    WPS216,
+    DAR201,
+    DAR101,
+    D205,
+    WPS112,
+    DAR401,
+    E501,
+    WPS115,
+    WPS529,
+    F6401
